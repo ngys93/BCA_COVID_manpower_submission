@@ -1,0 +1,91 @@
+import pandas as pd
+import numpy as np
+import openpyxl
+from openpyxl import load_workbook
+
+ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
+              'Name','Mobile No','Type of Residence',
+              'Area of Profesional','Occupation',
+              'Is the individual appointed as a Safe Management Officer (SMO)?',
+              'Is the individual appointed as a Safe Distancing Officer (SDO)?',
+              'Is the individual appointed as a COVID Safe Worker Leader?',
+              'Is the individual based in a worksite/facility?','Company',
+              'Direct Employer Company Name')
+
+def read(path,sheet):
+    df = pd.read_excel(path,sheet)
+    return df
+def extract(df):
+    df_em = df
+    data_c = ('SL NO',
+              'Role in organisation',
+              'Team identifier',
+              'NRIC/FIN',
+              'Direct Employer Company Name',
+              'Name',
+              'Activity',
+              'Work level',
+              'Work Zone e.g Blk 1 lvl 8, zone A etc',
+              'Arrival time (HH:MM AM/PM)',
+              'Morning break (HH:MM AM/PM, duration)',
+              'Lunch time (HH:MM AM/PM, duration)',
+              'Afternoon break (HH:MM AM/PM, duration)',
+              'Exit time (HH:MM AM/PM)')
+    df_STP = pd.DataFrame()
+    for i in data_c:
+        df_STP[i] = df_em[i]
+    df_STP.rename(columns={'Role in organisation':'Role',
+                           'Direct Employer Company Name':'Firm',
+                           'Name':'Name of worker/staff',
+                           'Activitiy':'Activity to be carried out',
+                           'Work level':'Location of work - Floor',
+                           'Work Zone e.g Blk 1 lvl 8, zone A etc':'Location of work - Zone'},inplace=True)
+    return df_STP
+
+def remove_blanks_duplicates(df):
+    #remove duplicates in Employee details sheet
+    df.drop_duplicates(subset = ['NRIC/FIN'],keep = "first", inplace = True)#source is changed
+    #remove blanks or #N/A values
+    df.dropna(axis = 0,how ='any', subset = ['NRIC/FIN'],inplace = True)
+    df.index = np.arange(1,len(df)+1)
+    df['SL NO'] = df.index
+    df['Area of Profesional'].fillna('NA',inplace=True)
+    return df
+
+def align_format(df):
+    global ED_colkeep
+    df_col = list(df.columns)
+    for col in df_col:
+        if col not in ED_colkeep:
+            df.drop(columns=[col],inplace=True)
+    return df
+
+def write_BCA(path,df1,df2,df3,df4):
+    with pd.ExcelWriter(path) as writer:
+        df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
+        df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
+        df3.to_excel(writer, sheet_name = 'Segragation Team Plan', index=False)
+        df4.to_excel(writer, sheet_name = 'Worksite Details', index=False)
+def write_MS(path,df1):
+    with pd.ExcelWriter(path) as writer:
+        df1.to_excel(writer, sheet_name = 'Employee Details', index=False)
+        
+def BCA_main():
+    path1 = str(input("Please enter in file location of test file:\n"))
+    path2 = str(input("Please enter in file location of master file:\n"))
+    path1 = path1.replace('\\','/')
+    path2 = path2.replace('\\','/')
+
+    #initialise dataframes
+    df_FD = read(path1,0)
+    df_EMv1 = remove_blanks_duplicates(read(path1,1))
+    df_STP = extract(df_EMv1)
+    df_EMv1 = align_format(df_EMv1)
+    df_EMv2 = df_EMv1.drop(columns=['Type of Pass','Company','Direct Employer Company Name'],
+                           inplace=False)
+    df_WD = read(path1,3)
+
+    write_BCA(path1,df_FD,df_EMv2,df_STP,df_WD)
+    print('BCA format ready')
+    write_MS(path2,df_EMv1)
+    print('Master file updated')
