@@ -10,7 +10,9 @@ ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
               'Is the individual appointed as a Safe Distancing Officer (SDO)?',
               'Is the individual appointed as a COVID Safe Worker Leader?',
               'Is the individual based in a worksite/facility?','Company',
-              'Direct Employer Company Name')
+              'Direct Employer Company Name','STREET NAME',
+              'BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc',
+              'Team identifier')
 
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
@@ -19,9 +21,9 @@ def extract(df):
     df_em = df
     data_c = ('SL NO',
               'Role in organisation',
+              'Direct Employer Company Name',
               'Team identifier',
               'NRIC/FIN',
-              'Direct Employer Company Name',
               'Name',
               'Activity',
               'Work level',
@@ -54,11 +56,23 @@ def remove_blanks_duplicates(df):
 
 def align_format(df):
     global ED_colkeep
+    lst = ('STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc',
+           'Team identifier')
     df_col = list(df.columns)
     for col in df_col:
         if col not in ED_colkeep:
             df.drop(columns=[col],inplace=True)
-    return df
+    
+    for i in lst:
+        df[i].fillna('NA',inplace=True)
+    #reorder columns
+    df_1 = df.reindex(columns=['SL NO','UEN','NRIC/FIN','Name','Mobile No','Type of Residence','Area of Profesional','Occupation',
+                               'Is the individual appointed as a Safe Management Officer (SMO)?',
+                               'Is the individual appointed as a Safe Distancing Officer (SDO)?',
+                               'Is the individual appointed as a COVID Safe Worker Leader?',
+                               'Is the individual based in a worksite/facility?','Company',
+                               'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier','Type of Pass'])
+    return df_1
 
 def write_BCA(path,df1,df2,df3,df4):
     with pd.ExcelWriter(path) as writer:
@@ -81,8 +95,10 @@ def BCA_main():
     df_EMv1 = remove_blanks_duplicates(read(path1,1))
     df_STP = extract(df_EMv1)
     df_EMv1 = align_format(df_EMv1)
-    df_EMv2 = df_EMv1.drop(columns=['Type of Pass','Company','Direct Employer Company Name'],
-                           inplace=False)
+    df_EMv2 = df_EMv1.drop(columns=['Type of Pass','Company','Direct Employer Company Name',
+                                    'STREET NAME','BLOCK','LEVEL','UNIT',
+                                    'Work Zone e.g Blk 1 lvl 8, zone A etc',
+                                    'Team identifier'],inplace=False)
     df_WD = read(path1,3)
 
     write_BCA(path1,df_FD,df_EMv2,df_STP,df_WD)
