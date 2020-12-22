@@ -1,0 +1,3 @@
+#BCA file is encrypted.
+#formatting would need to be preserved.
+#first method to try to iterate thru every fill cell in every sheet and assign the respective cell.value
