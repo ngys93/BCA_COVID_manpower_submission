@@ -1,3 +1,25 @@
 #BCA file is encrypted.
 #formatting would need to be preserved.
 #first method to try to iterate thru every fill cell in every sheet and assign the respective cell.value
+import pandas as pd
+import numpy as np
+from openpyxl import load_workbook
+from openpyxl import open_workbook
+
+def open_wb(path,i):
+    #read in existing wb
+    wb = load_workbook(path)
+    #to return wb with sheetname
+    return wb[i]
+def align():
+
+def copy_BCA():
+    path1 = str(input("Please enter in file location of test file:\n"))
+    path2 = str(input("Please enter in file location of BCA submission file:\n"))
+
+    path1 = path1.replace('\\','/')
+    path2 = path2.replace('\\','/')
+
+    sheet_names = ('Employee Details','(LS) Segregated Team Plan')
+    
+    for i in sheet_names:
