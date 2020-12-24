@@ -78,30 +78,20 @@ def write_BCA(path,df1,df2,df3,df4):
     with pd.ExcelWriter(path) as writer:
         df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
         df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
-        df3.to_excel(writer, sheet_name = 'Segragation Team Plan', index=False)
+        df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
         df4.to_excel(writer, sheet_name = 'Worksite Details', index=False)
-def write_MS(path,df1):
-    with pd.ExcelWriter(path) as writer:
-        df1.to_excel(writer, sheet_name = 'Employee Details', index=False)
+
         
 def BCA_main():
     path1 = str(input("Please enter in file location of test file:\n"))
-    path2 = str(input("Please enter in file location of master file:\n"))
     path1 = path1.replace('\\','/')
-    path2 = path2.replace('\\','/')
 
     #initialise dataframes
     df_FD = read(path1,0)
     df_EMv1 = remove_blanks_duplicates(read(path1,1))
     df_STP = extract(df_EMv1)
     df_EMv1 = align_format(df_EMv1)
-    df_EMv2 = df_EMv1.drop(columns=['Type of Pass','Company','Direct Employer Company Name',
-                                    'STREET NAME','BLOCK','LEVEL','UNIT',
-                                    'Work Zone e.g Blk 1 lvl 8, zone A etc',
-                                    'Team identifier'],inplace=False)
     df_WD = read(path1,3)
 
-    write_BCA(path1,df_FD,df_EMv2,df_STP,df_WD)
+    write_BCA(path1,df_FD,df_EMv1,df_STP,df_WD)
     print('BCA format ready')
-    write_MS(path2,df_EMv1)
-    print('Master file updated')
