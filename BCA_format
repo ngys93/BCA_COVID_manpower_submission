@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
               'Name','Mobile No','Type of Residence',
