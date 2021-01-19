@@ -109,11 +109,9 @@ def add_company(df):
 
     return df_1
 
-        
-def BCA_main():
+if __name__ == '__main__':
     path1 = str(input("Please enter in file location of test file:\n"))
     path1 = path1.replace('\\','/')
-
     #initialise dataframes
     df_EMv1 = remove_blanks_duplicates(read(path1,1))
     df_FD = df_EMv1.copy(deep=True)
@@ -121,6 +119,5 @@ def BCA_main():
     df_STP = extract(df_EMv1)
     df_EMv1 = align_format(df_EMv1)
     df_WD = read(path1,3)
-
     write_BCA(path1,df_FD1,df_EMv1,df_STP,df_WD)
     print('BCA format ready')
