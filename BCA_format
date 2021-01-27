@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from collections import Counter
 
 ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
               'Name','Mobile No','Type of Residence',
@@ -81,7 +82,7 @@ def write_BCA(path,df1,df2,df3,df4):
         df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
         df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
         df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
-        df4.to_excel(writer, sheet_name = 'Worksite Details', index=False)
+        df4.to_excel(writer, sheet_name = 'Worksite Details', index=True)
 
 def add_company(df):
     global FD_colkeep
@@ -109,15 +110,89 @@ def add_company(df):
 
     return df_1
 
+def worksite(df):
+    #pass in copy of EMv1(deep copy)
+    #create new dataframe ['Zone','Activity', 'Team', 'week 0' - 'week12']
+    df_worksite = pd.DataFrame(columns = ['Work Zone e.g Blk 1 lvl 8, zone A etc','Activity','Team identifier',
+                                          'Week 0','Week 1','Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6',
+                                          'Week 7', 'Week 8', 'Week 9', 'Week 10', 'Week 11', 'Week 12'])
+    df_worksite.fillna(0)#fill all cells with 0
+    #remove blanks
+    df.dropna(axis = 0,how ='any', subset = ['Team identifier'],inplace = True)
+    df_wd_columns = list(df_worksite.columns)
+    for i in df_wd_columns[0:3]:
+        #assign df values fo df_worksite values
+        #column names must be the same
+        df_worksite[i] = df[i]
+    #store team list in a dictonary(key = team, value = count)
+    dic = dic_team(df_worksite['Team identifier'])
+    #remove all duplicates from team
+    df_worksite.drop_duplicates(subset = ['Team identifier'],keep = "first", inplace = True)
+    #dic should be a dic{key = team, value = count of team}
+    #call calculate func to fill in weeks
+    df_worksite.index = df_worksite['Team identifier']
+    df_worksite = calc_team(dic, df_worksite)
+    df_worksite.index = np.arange(1,len(df)+1)
+    return df_worksite
+
+def calc_team(dic,df):
+    weekly_list = ('1-1','2-1','2-2','2-3','40-1')#full attendence every week
+    client_subcon_temp = ('41-1','41-2','41-3','41-4','41-5','41-6','41-7',
+                          '43-1','44-1','45-1','46-1','47-1','48-1')
+    wt = ((df.columns))[3:]
+    df_weeks= list(df.columns)#list of columns names to be iterated
+    df_weeks = df_weeks[3:]#drop out first columns name
+    team_list = df['Team identifier']#index
+    for team in df['Team identifier']:
+        val = dic.get(team_list[team])
+        if team_list[team] in weekly_list:
+            for week in wt:
+                df.loc[team,week] = val
+        elif team_list[team] in client_subcon_temp:
+            for week in wt[:5:1]:
+                df.loc[team,week] = val
+        else:#team in neither 
+            if (val%2) == 0:
+                for week in wt[::2]: # all even weeks
+                    if (val//2)> 10:   
+                        df.loc[team,week] = val//2
+                    else:
+                        df.loc[team,week] = val                        
+            else:
+                for week in wt[1::2]: # all even weeks
+                    if (val//2)>10:
+                        df.loc[team,week] = val//2
+                    else:
+                        df.loc[team,week] = val
+    #fill all missing cells as int(0)\
+    for week in wt:
+        df[week].fillna(int(0),inplace=True)
+    return df
+
+def dic_team(df):#pass of one column in argument
+    d = Counter(list(df))
+    return d
+    
+
 if __name__ == '__main__':
     path1 = str(input("Please enter in file location of test file:\n"))
     path1 = path1.replace('\\','/')
     #initialise dataframes
     df_EMv1 = remove_blanks_duplicates(read(path1,1))
-    df_FD = df_EMv1.copy(deep=True)
+    df_FD = df_EMv1.copy(deep=True)#deep copy1
+    df_wdv1 = df_EMv1.copy(deep=True)#deep copy2
+    #worksite calc
+    df_WD = worksite(df_wdv1)
+
+    #company details alignment
     df_FD1 = add_company(df_FD)
+
+    #STP
     df_STP = extract(df_EMv1)
+
+    #Employee details align
     df_EMv1 = align_format(df_EMv1)
-    df_WD = read(path1,3)
+
+    #write all into new file
     write_BCA(path1,df_FD1,df_EMv1,df_STP,df_WD)
     print('BCA format ready')
