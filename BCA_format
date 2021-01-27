@@ -17,6 +17,7 @@ FD_colkeep = ('SL NO','Role in Firm','UEN','Direct Employer Company Name',
               'Mobile of company POC',
               'Email of company POC',
               'Role of Firms')
+
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
     return df
@@ -81,8 +82,8 @@ def write_BCA(path,df1,df2,df3,df4):
     with pd.ExcelWriter(path) as writer:
         df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
         df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
-        df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
         df4.to_excel(writer, sheet_name = 'Worksite Details', index=True)
+        df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
 
 def add_company(df):
     global FD_colkeep
@@ -132,7 +133,7 @@ def worksite(df):
     #call calculate func to fill in weeks
     df_worksite.index = df_worksite['Team identifier']
     df_worksite = calc_team(dic, df_worksite)
-    df_worksite.index = np.arange(1,len(df)+1)
+    df_worksite.index = np.arange(1,len(df_worksite)+1)
     return df_worksite
 
 def calc_team(dic,df):
@@ -152,18 +153,29 @@ def calc_team(dic,df):
             for week in wt[:5:1]:
                 df.loc[team,week] = val
         else:#team in neither 
-            if (val%2) == 0:
-                for week in wt[::2]: # all even weeks
-                    if (val//2)> 10:   
-                        df.loc[team,week] = val//2
-                    else:
-                        df.loc[team,week] = val                        
-            else:
-                for week in wt[1::2]: # all even weeks
-                    if (val//2)>10:
-                        df.loc[team,week] = val//2
-                    else:
+            if (val%3) == 1:
+                #if activity is WSH
+                if df.loc[team, 'Activity'] == 'WSH' or df.loc[team, 'Activity'] == 'Scaffolding work':#WSH and scafoldding exception
+                    for week in wt:
                         df.loc[team,week] = val
+                else:
+                    for week in wt: # all even weeks
+                        if val>100:   
+                            df.loc[team,week] = val//2
+                        else:
+                            for week in wt[::2]:
+                                df.loc[team,week] = val                        
+            else:
+                if df.loc[team, 'Activity'] == 'WSH' or df.loc[team, 'Activity'] == 'Scaffolding work':##WSH and scafoldding exception
+                    for week in wt:
+                        df.loc[team,week] = val
+                else:
+                    for week in wt: # all even weeks
+                        if val>100:
+                            df.loc[team,week] = val//2
+                        else:
+                            for week in wt[1::2]:
+                                df.loc[team,week] = val
     #fill all missing cells as int(0)\
     for week in wt:
         df[week].fillna(int(0),inplace=True)
