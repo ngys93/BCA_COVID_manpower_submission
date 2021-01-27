@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from collections import Counter
+import random
 
 ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
               'Name','Mobile No','Type of Residence',
@@ -159,23 +160,28 @@ def calc_team(dic,df):
                     for week in wt:
                         df.loc[team,week] = val
                 else:
-                    for week in wt: # all even weeks
-                        if val>100:   
-                            df.loc[team,week] = val//2
-                        else:
-                            for week in wt[::2]:
-                                df.loc[team,week] = val                        
-            else:
+                    if val>10:
+                        for week in wt[::2]:#all even weeks
+                            df.loc[team,week] = (val//2) + int(random.randrange(0,(val//3),1))
+                        for week in wt[1::2]:#all odd weeks
+                            df.loc[team,week] = (val//2) + int(random.randrange(0,(val//5),1))
+                    else:
+                        for week in wt:
+                            df.loc[team,week] = val
+            else:#val<100 or val == 100
                 if df.loc[team, 'Activity'] == 'WSH' or df.loc[team, 'Activity'] == 'Scaffolding work':##WSH and scafoldding exception
                     for week in wt:
                         df.loc[team,week] = val
                 else:
-                    for week in wt: # all even weeks
-                        if val>100:
-                            df.loc[team,week] = val//2
-                        else:
-                            for week in wt[1::2]:
-                                df.loc[team,week] = val
+                    if val>10:
+                        for week in wt[::2]:# all even weeks
+                            df.loc[team,week] = (val//2) + int(random.randrange(0,(val//3),1))
+                        for week in wt[1::2]:#all odd weeks
+                            df.loc[team,week] = (val//2) + int(random.randrange(0,(val//5),1))
+                            
+                    else:#val<10
+                        for week in wt:
+                            df.loc[team,week] = val
     #fill all missing cells as int(0)\
     for week in wt:
         df[week].fillna(int(0),inplace=True)
