@@ -79,12 +79,13 @@ def align_format(df):
                                'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier','Type of Pass'])
     return df_1
 
-def write_BCA(path,df1,df2,df3,df4):
+def write_BCA(path,df1,df2,df3,df4,df_compare):
     with pd.ExcelWriter(path) as writer:
         df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
         df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
         df4.to_excel(writer, sheet_name = 'Worksite Details', index=True)
         df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
+        df_compare.to_excel(writer, sheet_name = 'Comparison', index=False)
 
 def add_company(df):
     global FD_colkeep
@@ -190,11 +191,58 @@ def calc_team(dic,df):
 def dic_team(df):#pass of one column in argument
     d = Counter(list(df))
     return d
-    
+
+def compare(df_A,df_B):
+    #compare latest and earlier versions
+    #df_A is latest, df_B is outdated
+    #isolate added and remove names
+    #create new dataframe
+    added_NRIC = []
+    added_names = []
+    added_company = []
+    remove_NRIC = []
+    remove_names = []
+    remove_company = []
+    #for added names
+    col_nricA = list(df_A.iloc[:,2])
+    col_nricB = list(df_B.iloc[:,2])
+    for num in range(1,len(col_nricA)):
+        if df_A.iloc[num,2] in col_nricB:
+            pass
+        else:
+            added_NRIC.append(df_A.iloc[num,2])
+            added_names.append(df_A.iloc[num,3])
+            added_company.append(df_A.iloc[num,12])
+    #for remove names
+    for num in range(1,len(col_nricB)):
+        if df_B.iloc[num,2] in col_nricA:
+            pass
+        else:
+            remove_NRIC.append(df_B.iloc[num,2])
+            remove_names.append(df_B.iloc[num,3])
+            remove_company.append(df_B.iloc[num,12])
+    #compare len
+    while len(added_NRIC) != len(remove_NRIC):
+        #if added_NRIC more
+        if len(added_NRIC)<len(remove_NRIC):
+            added_NRIC.append('NIL')
+            added_names.append('NIL')
+            added_company.append('NIL')
+        if len(remove_NRIC)<len(added_NRIC):
+            remove_NRIC.append('NIL')
+            remove_names.append('NIL')
+            remove_company.append('NIL')
+    d_dic = {'added_NRIC/FIN':added_NRIC,'added_names':added_names,
+             'added_company':added_company,'remove_NRIC/FIN':remove_NRIC,
+             'remove_names':remove_names,'remove_company':remove_company}
+    df_compare = pd.DataFrame(data = d_dic)
+    return df_compare
 
 if __name__ == '__main__':
     path1 = str(input("Please enter in file location of test file:\n"))
+    path2 = str(input("Please enter in file location of preceeded test file:\n"))
     path1 = path1.replace('\\','/')
+    path2 = path2.replace('\\','/')
     #initialise dataframes
     df_EMv1 = remove_blanks_duplicates(read(path1,1))
     df_FD = df_EMv1.copy(deep=True)#deep copy1
@@ -211,6 +259,10 @@ if __name__ == '__main__':
     #Employee details align
     df_EMv1 = align_format(df_EMv1)
 
+    #compare for new and removed names
+    df_outdated = read(path2, 1)
+    df_compare = compare(df_EMv1,df_outdated)
+
     #write all into new file
-    write_BCA(path1,df_FD1,df_EMv1,df_STP,df_WD)
+    write_BCA(path1,df_FD1,df_EMv1,df_STP,df_WD,df_compare)
     print('BCA format ready')
