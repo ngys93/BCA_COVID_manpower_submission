@@ -1,25 +1,24 @@
-#BCA file is encrypted.
-#formatting would need to be preserved.
-#first method to try to iterate thru every fill cell in every sheet and assign the respective cell.value
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
-from openpyxl import open_workbook
 
-def open_wb(path,i):
-    #read in existing wb
-    wb = load_workbook(path)
-    #to return wb with sheetname
-    return wb[i]
-def align():
+def write_FD(PATH_wb,df,file):
+    #to write in data from df into workbook
+    #assume is empty sheet
+    #initialise wb_sheet
+    wb = load_workbook(filename = PATH_wb)
+    sheet_FD = wb['Firm Details']
+    len_col = len(df.columns) # no of columns
+    len_indx = len(df.index) # no of rows
+    for row in range(4,len_indx+4):
+        for col in range(1,len_col+1):
+            sheet_FD.cell(row = row, column = col, value = df.iloc[row-4,col-1])
+    wb.save(filename = file)
 
-def copy_BCA():
-    path1 = str(input("Please enter in file location of test file:\n"))
-    path2 = str(input("Please enter in file location of BCA submission file:\n"))
 
-    path1 = path1.replace('\\','/')
-    path2 = path2.replace('\\','/')
-
-    sheet_names = ('Employee Details','(LS) Segregated Team Plan')
-    
-    for i in sheet_names:
+if __name__ == '__main__':
+    #read in dataframe
+    df_firm = pd.read_excel(PATH_df,0)
+    df_ED = pd.read_excel(PATH_df,1)
+    df_WD = pd.read_excel(PATH_df,2)
+    df_STP = pd.read_excel(PATH_df,3)
