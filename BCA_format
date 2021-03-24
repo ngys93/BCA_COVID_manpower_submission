@@ -12,12 +12,18 @@ ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
               'Is the individual based in a worksite/facility?','Company',
               'Direct Employer Company Name','STREET NAME',
               'BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc',
-              'Team identifier')
+              'Team identifier','Gender')
 FD_colkeep = ('SL NO','Role in Firm','UEN','Direct Employer Company Name',
               'Name of company POC',
               'Mobile of company POC',
               'Email of company POC',
               'Role of Firms')
+VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
+                'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
+VC_colkeep = ('NRIC/FIN','Type of Pass','Name',
+                'Company',
+                'Direct Employer Company Name','For PBDs, select dormitory from drop-down list',
+                'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)')
 
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
@@ -76,16 +82,17 @@ def align_format(df):
                                'Is the individual appointed as a Safe Distancing Officer (SDO)?',
                                'Is the individual appointed as a COVID Safe Worker Leader?',
                                'Is the individual based in a worksite/facility?','Company',
-                               'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier','Type of Pass'])
+                               'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier','Type of Pass','Gender'])
     return df_1
 
-def write_BCA(path,df1,df2,df3,df4,df_compare):
+def write_BCA(path,df1,df2,df3,df4,df_compare,df_vc):
     with pd.ExcelWriter(path) as writer:
         df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
         df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
         df4.to_excel(writer, sheet_name = 'Worksite Details', index=True)
         df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
         df_compare.to_excel(writer, sheet_name = 'Comparison', index=False)
+        df_vc.to_excel(writer, sheet_name = 'Vacination Tracker', index=False)
 
 def add_company(df):
     global FD_colkeep
@@ -225,22 +232,46 @@ def compare(df_A,df_B):
     while len(added_NRIC) != len(remove_NRIC):
         #if added_NRIC more
         if len(added_NRIC)<len(remove_NRIC):
-            added_NRIC.append('NIL')
-            added_names.append('NIL')
-            added_company.append('NIL')
+            added_NRIC.append('-')
+            added_names.append('-')
+            added_company.append('-')
         if len(remove_NRIC)<len(added_NRIC):
-            remove_NRIC.append('NIL')
-            remove_names.append('NIL')
-            remove_company.append('NIL')
+            remove_NRIC.append('-')
+            remove_names.append('-')
+            remove_company.append('-')
     d_dic = {'added_NRIC/FIN':added_NRIC,'added_names':added_names,
              'added_company':added_company,'remove_NRIC/FIN':remove_NRIC,
              'remove_names':remove_names,'remove_company':remove_company}
     df_compare = pd.DataFrame(data = d_dic)
     return df_compare
 
+def isvacinated(df):
+    #pass in global variables
+    global VC_dorm
+    global VC_colkeep
+    #pass in full master list
+    #keep appropriate columns
+    lst_col = list(df.columns)
+    for col in lst_col:
+        if col not in VC_colkeep:
+            df.drop(columns=[col],inplace=True)
+    #reindex columns
+    df_1= df.reindex(columns=['NRIC/FIN','Name','Company',
+                'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
+                'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)'])
+    #remove all SPR/SC, only track foreign workers
+    for pass_type in df_1['Type of Pass']:
+        if pass_type == 'SPR/SC':
+            df_1.drop(index = df_1.index[df_1['Type of Pass']=='SPR/SC'].tolist(),inplace = True)
+    for dorm_type in df_1['For PBDs, select dormitory from drop-down list']:
+        if dorm_type not in VC_dorm:
+            df_1.drop(index = df_1.index[df_1['For PBDs, select dormitory from drop-down list']==dorm_type].tolist(),inplace = True)
+    df_1.dropna(axis = 0,how ='any', subset = ['For PBDs, select dormitory from drop-down list'],inplace = True)
+    return df_1
+
 if __name__ == '__main__':
-    path1 = str(input("Please enter in file location of test file:\n"))
-    path2 = str(input("Please enter in file location of preceeded test file:\n"))
+    path1 = str(input("Please enter in file location of BCA submission file:\n"))
+    path2 = str(input("Please enter in file location of preceeded BCA approved file:\n"))
     path1 = path1.replace('\\','/')
     path2 = path2.replace('\\','/')
     #initialise dataframes
@@ -257,12 +288,15 @@ if __name__ == '__main__':
     df_STP = extract(df_EMv1)
 
     #Employee details align
-    df_EMv1 = align_format(df_EMv1)
+    df_EMv2 = align_format(df_EMv1.copy(deep=True))
 
     #compare for new and removed names
     df_outdated = read(path2, 1)
-    df_compare = compare(df_EMv1,df_outdated)
+    df_compare = compare(df_EMv2,df_outdated)
+
+    #track vacinated
+    df_vc = isvacinated(df_EMv1.copy(deep=True))
 
     #write all into new file
-    write_BCA(path1,df_FD1,df_EMv1,df_STP,df_WD,df_compare)
+    write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
     print('BCA format ready')
