@@ -245,8 +245,7 @@ def isvacinated_over45(df):
     #pass in df true copy
     #isolate over 45 age grp
     index = df.index[df['Age']<45].tolist()
-    for num in index:
-        df.drop(index = num,inplace=True)
+    df.drop(index = index,inplace=True)
     lst_col = list(df.columns)
     #align column format
     for col in lst_col:
@@ -267,7 +266,8 @@ def isvacinated_dormcheck(df):
     lst_col = list(df.columns)
     for col in lst_col:
         if col not in VC_colkeep:
-            df.drop(columns=[col],inplace=True)
+            lst_col.remove(col)
+    df.drop(columns=lst_col,inplace=True)
     #reindex columns
     df_1= df.reindex(columns=['NRIC/FIN','Name','Age','Company',
                 'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
@@ -319,6 +319,6 @@ if __name__ == '__main__':
     #end time
     end_time = datetime.now()
     #write all into new file
-    write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
+    #write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
     print('BCA format ready')
     print('Duration: {}'.format(end_time - start_time))
