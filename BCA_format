@@ -20,8 +20,7 @@ FD_colkeep = ('SL NO','Role in Firm','UEN','Direct Employer Company Name',
               'Role of Firms')
 VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
                 'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
-VC_colkeep = ('NRIC/FIN','Type of Pass','Name',
-                'Company',
+VC_colkeep = ('NRIC/FIN','Type of Pass','Name','Age','Company',
                 'Direct Employer Company Name','For PBDs, select dormitory from drop-down list',
                 'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)')
 
@@ -30,14 +29,8 @@ def read(path,sheet):
     return df
 def extract(df):
     df_em = df
-    data_c = ('SL NO',
-              'Role in organisation',
-              'Direct Employer Company Name',
-              'Team identifier',
-              'NRIC/FIN',
-              'Name',
-              'Activity',
-              'Work level',
+    data_c = ('SL NO','Role in organisation','Direct Employer Company Name',
+              'Team identifier','NRIC/FIN','Name','Activity','Work level',
               'Work Zone e.g Blk 1 lvl 8, zone A etc',
               'Arrival time (HH:MM AM/PM)',
               'Morning break (HH:MM AM/PM, duration)',
@@ -63,6 +56,7 @@ def remove_blanks_duplicates(df):
     df.index = np.arange(1,len(df)+1)
     df['SL NO'] = df.index
     df['Area of Profesional'].fillna('NA',inplace=True)
+    df['Age']=pd.to_numeric(df['Age'])
     return df
 
 def align_format(df):
@@ -244,8 +238,25 @@ def compare(df_A,df_B):
              'remove_names':remove_names,'remove_company':remove_company}
     df_compare = pd.DataFrame(data = d_dic)
     return df_compare
+def isvacinated_over45(df):
+    global VC_colkeep
+    #pass in df true copy
+    #isolate over 45 age grp
 
-def isvacinated(df):
+    index = df.index[df['Age']>44].tolist()
+    df_1 = df.iloc[index,:]
+    lst_col = list(df_1.columns)
+    #align column format
+    for col in lst_col:
+        if col not in VC_colkeep:
+            df_1.drop(columns=[col],inplace=True)
+    #reindex column
+    df_1= df.reindex(columns=['NRIC/FIN','Name','Age','Company',
+                'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
+                'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)'])
+    return df_1
+
+def isvacinated_dormcheck(df):
     #pass in global variables
     global VC_dorm
     global VC_colkeep
@@ -256,10 +267,10 @@ def isvacinated(df):
         if col not in VC_colkeep:
             df.drop(columns=[col],inplace=True)
     #reindex columns
-    df_1= df.reindex(columns=['NRIC/FIN','Name','Company',
+    df_1= df.reindex(columns=['NRIC/FIN','Name','Age','Company',
                 'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
                 'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)'])
-    #remove all SPR/SC, only track foreign workers
+
     for pass_type in df_1['Type of Pass']:
         if pass_type == 'SPR/SC':
             df_1.drop(index = df_1.index[df_1['Type of Pass']=='SPR/SC'].tolist(),inplace = True)
@@ -268,6 +279,12 @@ def isvacinated(df):
             df_1.drop(index = df_1.index[df_1['For PBDs, select dormitory from drop-down list']==dorm_type].tolist(),inplace = True)
     df_1.dropna(axis = 0,how ='any', subset = ['For PBDs, select dormitory from drop-down list'],inplace = True)
     return df_1
+def consolidate(df_over_45,df_dorm):
+    #to consolidate both dataframes
+    df_vc = pd.concat([df_over_45,df_dorm])
+    #remove potential duplicates of NRIC
+    df_vc.drop_duplicates(subset = ['NRIC/FIN'],keep = "first", inplace = True)
+    return df_vc
 
 if __name__ == '__main__':
     path1 = str(input("Please enter in file location of BCA submission file:\n"))
@@ -285,7 +302,7 @@ if __name__ == '__main__':
     df_FD1 = add_company(df_FD)
 
     #STP
-    df_STP = extract(df_EMv1)
+    df_STP = extract(df_EMv1.copy(deep=True))
 
     #Employee details align
     df_EMv2 = align_format(df_EMv1.copy(deep=True))
@@ -294,8 +311,12 @@ if __name__ == '__main__':
     df_outdated = read(path2, 1)
     df_compare = compare(df_EMv2,df_outdated)
 
-    #track vacinated
-    df_vc = isvacinated(df_EMv1.copy(deep=True))
+    #track vacinated for dorm
+    df_vc_over45 = isvacinated_over45(df_EMv1.copy(deep=True))
+    #track vacinated for over 45
+    df_vc_dorm = isvacinated_over45(df_EMv1.copy(deep=True))
+    #concatenate both df_vc_over45 and df_vc_dorm together(all duplicates to remove)
+    df_vc = consolidate(df_vc_over45,df_vc_dorm)
 
     #write all into new file
     write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
