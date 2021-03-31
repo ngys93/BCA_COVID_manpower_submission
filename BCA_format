@@ -4,16 +4,7 @@ from collections import Counter
 import random
 from datetime import datetime
 
-ED_colkeep = ('SL NO','UEN','NRIC/FIN','Type of Pass',
-              'Name','Mobile No','Type of Residence',
-              'Area of Profesional','Occupation',
-              'Is the individual appointed as a Safe Management Officer (SMO)?',
-              'Is the individual appointed as a Safe Distancing Officer (SDO)?',
-              'Is the individual appointed as a COVID Safe Worker Leader?',
-              'Is the individual based in a worksite/facility?','Company',
-              'Direct Employer Company Name','STREET NAME',
-              'BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc',
-              'Team identifier','Gender')
+ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,23)
 FD_colkeep = ('SL NO','Role in Firm','UEN','Direct Employer Company Name',
               'Name of company POC',
               'Mobile of company POC',
@@ -28,7 +19,7 @@ VC_colkeep = ('NRIC/FIN','Type of Pass','Name','Age','Company',
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
     return df
-def extract(df):
+def segragated_team_plan(df):
     df_em = df
     data_c = ('SL NO','Role in organisation','Direct Employer Company Name',
               'Team identifier','NRIC/FIN','Name','Activity','Work level',
@@ -38,6 +29,7 @@ def extract(df):
               'Lunch time (HH:MM AM/PM, duration)',
               'Afternoon break (HH:MM AM/PM, duration)',
               'Exit time (HH:MM AM/PM)')
+    drop_col = []
     df_STP = pd.DataFrame()
     for i in data_c:
         df_STP[i] = df_em[i]
@@ -65,10 +57,12 @@ def align_format(df):
     lst = ('STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc',
            'Team identifier')
     df_col = list(df.columns)
-    for col in df_col:
-        if col not in ED_colkeep:
-            df.drop(columns=[col],inplace=True)
-    
+    drop_col =[]
+    #drop based on index
+    for num in range(0,len(df_col)):
+        if num not in ED_colkeep:
+            drop_col.append(df_col[num])
+    df.drop(columns=drop_col,inplace=True)
     for i in lst:
         df[i].fillna('NA',inplace=True)
     #reorder columns
@@ -93,7 +87,6 @@ def add_company(df):
     global FD_colkeep
     proj_ref = []
     df_col = list(df.columns)
-
     for i in df_col:
         if i not in FD_colkeep:
             df.drop(columns=[i],inplace=True)
@@ -265,14 +258,13 @@ def isvacinated_dormcheck(df):
     #keep appropriate columns
     lst_col = list(df.columns)
     for col in lst_col:
-        if col not in VC_colkeep:
+        if col in VC_colkeep:
             lst_col.remove(col)
     df.drop(columns=lst_col,inplace=True)
     #reindex columns
     df_1= df.reindex(columns=['NRIC/FIN','Name','Age','Company',
                 'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
                 'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)'])
-
     for pass_type in df_1['Type of Pass']:
         if pass_type == 'SPR/SC':
             df_1.drop(index = df_1.index[df_1['Type of Pass']=='SPR/SC'].tolist(),inplace = True)
@@ -304,7 +296,7 @@ if __name__ == '__main__':
     #company details alignment
     df_FD1 = add_company(df_FD)
     #STP
-    df_STP = extract(df_EMv1.copy(deep=True))
+    df_STP = segragated_team_plan(df_EMv1)
     #Employee details align
     df_EMv2 = align_format(df_EMv1.copy(deep=True))
     #compare for new and removed names
@@ -313,12 +305,12 @@ if __name__ == '__main__':
     #track vacinated for dorm
     df_vc_over45 = isvacinated_over45(df_EMv1.copy(deep=True))
     #track vacinated for over 45
-    df_vc_dorm = isvacinated_over45(df_EMv1.copy(deep=True))
+    df_vc_dorm = isvacinated_dormcheck(df_EMv1.copy(deep=True))
     #concatenate both df_vc_over45 and df_vc_dorm together(all duplicates to remove)
     df_vc = consolidate(df_vc_over45,df_vc_dorm)
     #end time
     end_time = datetime.now()
     #write all into new file
-    #write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
+    write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
     print('BCA format ready')
     print('Duration: {}'.format(end_time - start_time))
