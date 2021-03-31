@@ -20,23 +20,24 @@ def read(path,sheet):
     df = pd.read_excel(path,sheet)
     return df
 def segragated_team_plan(df):
-    df_em = df
-    data_c = ('SL NO','Role in organisation','Direct Employer Company Name',
-              'Team identifier','NRIC/FIN','Name','Activity','Work level',
-              'Work Zone e.g Blk 1 lvl 8, zone A etc',
-              'Arrival time (HH:MM AM/PM)',
-              'Morning break (HH:MM AM/PM, duration)',
-              'Lunch time (HH:MM AM/PM, duration)',
-              'Afternoon break (HH:MM AM/PM, duration)',
-              'Exit time (HH:MM AM/PM)')
+    lst_col = list(df.columns)
+    data_c = (0,71,25,67,2,4,70,72,66,73,74,75,76,77)
     drop_col = []
-    df_STP = pd.DataFrame()
-    for i in data_c:
-        df_STP[i] = df_em[i]
+    for num in range(0,len(lst_col)):
+        if num not in data_c:
+            drop_col.append(lst_col[num])
+    df.drop(columns=drop_col,inplace=True)
+    #reindex columns
+    df_STP= df.reindex(columns=['SL NO','Role in organisation','Direct Employer Company Name',
+                                'Team identifier','NRIC/FIN','Name','Activity','Work level',
+                                'Work Zone e.g Blk 1 lvl 8, zone A etc',
+                                'Arrival time (HH:MM AM/PM)','Morning break (HH:MM AM/PM, duration)',
+                                'Lunch time (HH:MM AM/PM, duration)',
+                                'Afternoon break (HH:MM AM/PM, duration)','Exit time (HH:MM AM/PM)'])
     df_STP.rename(columns={'Role in organisation':'Role',
                            'Direct Employer Company Name':'Firm',
                            'Name':'Name of worker/staff',
-                           'Activitiy':'Activity to be carried out',
+                           'Activity':'Activity to be carried out',
                            'Work level':'Location of work - Floor',
                            'Work Zone e.g Blk 1 lvl 8, zone A etc':'Location of work - Zone'},inplace=True)
     return df_STP
@@ -296,9 +297,11 @@ if __name__ == '__main__':
     #company details alignment
     df_FD1 = add_company(df_FD)
     #STP
-    df_STP = segragated_team_plan(df_EMv1)
+    df_STP = segragated_team_plan(df_EMv1.copy(deep=True))
     #Employee details align
     df_EMv2 = align_format(df_EMv1.copy(deep=True))
+    #STP
+    df_STP = segragated_team_plan(df_EMv1.copy(deep=True))
     #compare for new and removed names
     df_outdated = read(path2, 1)
     df_compare = compare(df_EMv2,df_outdated)
