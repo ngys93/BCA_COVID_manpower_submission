@@ -5,11 +5,7 @@ import random
 from datetime import datetime
 
 ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,23)
-FD_colkeep = ('SL NO','Role in Firm','UEN','Direct Employer Company Name',
-              'Name of company POC',
-              'Mobile of company POC',
-              'Email of company POC',
-              'Role of Firms')
+FD_colkeep = (0,78,1,25,26,27,28)
 VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
                 'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
 VC_colkeep = ('NRIC/FIN','Type of Pass','Name','Age','Company',
@@ -84,15 +80,18 @@ def write_BCA(path,df1,df2,df3,df4,df_compare,df_vc):
         df_compare.to_excel(writer, sheet_name = 'Comparison', index=False)
         df_vc.to_excel(writer, sheet_name = 'Vacination Tracker', index=False)
 
-def add_company(df):
+def align_firm(df):
     global FD_colkeep
     proj_ref = []
+    drop_col = []
     df_col = list(df.columns)
-    for i in df_col:
-        if i not in FD_colkeep:
-            df.drop(columns=[i],inplace=True)
-            
-    df.drop_duplicates(subset = ['UEN'],keep = "first", inplace = True) #drop duplicates
+    for num in range(0,len(df_col)):
+        if num not in FD_colkeep:
+            #drop_col stores list of columns names to be dropped
+            drop_col.append(df_col[num])
+    df.drop(columns=drop_col,inplace=True)
+    #remove duplicates of UEN
+    df.drop_duplicates(subset = ['UEN'],keep = "first", inplace = True)
     df.index = np.arange(1,len(df)+1)
     df['SL NO'] = df.index
     for i in range(len(df.index)):
@@ -106,7 +105,6 @@ def add_company(df):
     df_1= df.reindex(columns=['Serial No','BCA Project Reference No / Contract No / Unique Identifier No',
                               'Role of Firms','UEN','Firm Name','Representative Name',
                               'Representative Mobile No','Representative Email'])
-
     return df_1
 
 def worksite(df):
@@ -274,6 +272,7 @@ def isvacinated_dormcheck(df):
             df_1.drop(index = df_1.index[df_1['For PBDs, select dormitory from drop-down list']==dorm_type].tolist(),inplace = True)
     df_1.dropna(axis = 0,how ='any', subset = ['For PBDs, select dormitory from drop-down list'],inplace = True)
     return df_1
+
 def consolidate(df_over_45,df_dorm):
     #to consolidate both dataframes
     df_vc = pd.concat([df_over_45,df_dorm])
@@ -295,7 +294,7 @@ if __name__ == '__main__':
     #worksite calc
     df_WD = worksite(df_wdv1)
     #company details alignment
-    df_FD1 = add_company(df_FD)
+    df_FD1 = align_firm(df_FD)
     #STP
     df_STP = segragated_team_plan(df_EMv1.copy(deep=True))
     #Employee details align
