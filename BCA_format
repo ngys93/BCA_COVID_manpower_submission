@@ -8,9 +8,7 @@ ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,23)
 FD_colkeep = (0,78,1,25,26,27,28)
 VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
                 'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
-VC_colkeep = ('NRIC/FIN','Type of Pass','Name','Age','Company',
-                'Direct Employer Company Name','For PBDs, select dormitory from drop-down list',
-                'Vaccination 1st Dose Date (DD/MM/YY)','Vaccination 2nd Dose Date(DD/MM/YY)')
+VC_colkeep = (2,3,4,79,20,25,31,80,81)
 
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
@@ -239,10 +237,12 @@ def isvacinated_over45(df):
     index = df.index[df['Age']<45].tolist()
     df.drop(index = index,inplace=True)
     lst_col = list(df.columns)
+    drop_col=[]
     #align column format
-    for col in lst_col:
-        if col not in VC_colkeep:
-            df.drop(columns=[col],inplace=True)
+    for num in range(0,len(lst_col)):
+        if num not in VC_colkeep:
+            drop_col.append(lst_col[num])
+    df.drop(columns=drop_col,inplace=True)
     #reindex column
     df_1= df.reindex(columns=['NRIC/FIN','Name','Age','Company',
                 'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
@@ -256,10 +256,11 @@ def isvacinated_dormcheck(df):
     #pass in full master list
     #keep appropriate columns
     lst_col = list(df.columns)
-    for col in lst_col:
-        if col in VC_colkeep:
-            lst_col.remove(col)
-    df.drop(columns=lst_col,inplace=True)
+    drop_col = []
+    for num in range(0,len(lst_col)):
+        if num not in VC_colkeep:
+            drop_col.append(lst_col[num])
+    df.drop(columns=drop_col,inplace=True)
     #reindex columns
     df_1= df.reindex(columns=['NRIC/FIN','Name','Age','Company',
                 'Direct Employer Company Name','For PBDs, select dormitory from drop-down list','Type of Pass',
@@ -270,7 +271,7 @@ def isvacinated_dormcheck(df):
     for dorm_type in df_1['For PBDs, select dormitory from drop-down list']:
         if dorm_type not in VC_dorm:
             df_1.drop(index = df_1.index[df_1['For PBDs, select dormitory from drop-down list']==dorm_type].tolist(),inplace = True)
-    df_1.dropna(axis = 0,how ='any', subset = ['For PBDs, select dormitory from drop-down list'],inplace = True)
+    df_1.dropna(axis = 0,how ='any', subset = ['For PBDs, select dormitory from drop-down list'],inplace = True)#not in dorm
     return df_1
 
 def consolidate(df_over_45,df_dorm):
