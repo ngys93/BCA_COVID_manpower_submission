@@ -4,12 +4,13 @@ from collections import Counter
 import random
 from datetime import datetime
 
-ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,23)
+ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,23,82,83)
 FD_colkeep = (0,78,1,25,26,27,28)
 VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
                 'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
 VC_colkeep = (2,3,4,79,20,25,31,80,81)
-
+ZoneA_colkeep = (2,3,4,20,25,82)
+ZoneB_colkeep = (2,3,4,20,25,83)
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
     return df
@@ -66,7 +67,8 @@ def align_format(df):
                                'Is the individual appointed as a Safe Distancing Officer (SDO)?',
                                'Is the individual appointed as a COVID Safe Worker Leader?',
                                'Is the individual based in a worksite/facility?','Company',
-                               'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier','Type of Pass','Gender'])
+                               'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier',
+                               'Type of Pass','Gender','Zone A Construction Area','Zone B FR Area'])
     return df_1
 
 def write_BCA(path,df1,df2,df3,df4,df_compare,df_vc):
@@ -133,7 +135,7 @@ def worksite(df):
 def calc_team(dic,df):
     weekly_list = ('1-1','2-1','2-2','2-3','40-1')#full attendence every week
     client_subcon_temp = ('41-1','41-2','41-3','41-4','41-5','41-6','41-7',
-                          '43-1','44-1','45-1','46-1','47-1','48-1')
+                          '43-1','53-1','54-1','46-1','47-1','48-1')
     wt = ((df.columns))[3:]
     df_weeks= list(df.columns)#list of columns names to be iterated
     df_weeks = df_weeks[3:]#drop out first columns name
