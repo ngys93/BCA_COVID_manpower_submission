@@ -1,0 +1,88 @@
+import pandas as pd
+import numpy as np
+from collections import Counter
+import random
+from datetime import datetime
+
+lst_zone = (2,3,12,13,22,23)
+
+drop_lst = ('BESCON','3HPA','AT','Chong & Lee',
+            'GOOGLE ASIA PACIFIC PTE. LTD.','BBFL PTE. LTD.',
+            'ALPHA ACOUSTICS ENGINEERING PTE. LTD.','SD ARCHITECTS & ASSOCIATES PTE. LTD.',
+            'NEW UNIVERSAL SOLUTION','SODEXO SINGAPORE PTE. LTD.','SATO KOGYO (S) PTE. LTD.')
+
+def read(path,sheet):
+    df = pd.read_excel(path,sheet)
+    return df
+
+def isolate_zone_A(df):#df_approved must be deep copy
+    global lst_zone
+    global drop_lst
+    lst_col = list(df.columns)
+    drop_col = []
+    for num in range(0,len(lst_col)):
+        if num not in lst_zone:
+            drop_col.append(lst_col[num])
+    df.drop(columns=drop_col,inplace=True)
+    #drop all 'No' in df['Zone A']
+    df.drop(index = df.index[df['Zone A Construction Area']=='No'].tolist(),inplace = True)
+    #drop all blanks in df['Zone A']
+    df.dropna(axis = 0,how ='any', subset = ['Zone A Construction Area'],inplace = True)
+    #fill all blanks in zone B as 'No
+    df['Zone B FR Area'].fillna('No',inplace=True)
+    #hide NRIC
+    new_NRIC = hide_NRIC(list(df['NRIC/FIN']))
+    df['NRIC/FIN'] = new_NRIC
+    return df
+
+def isolate_zone_B(df):#df_approved must be deep copy
+    global lst_zone
+    lst_col = list(df.columns)
+    drop_col = []
+    for num in range(0,len(lst_col)):
+        if num not in lst_zone:
+            drop_col.append(lst_col[num])
+    df.drop(columns=drop_col,inplace=True)
+    #drop all 'No' in df['Zone B']
+    df.drop(index = df.index[df['Zone B FR Area']=='No'].tolist(),inplace = True)
+    #drop all blanks in df['Zone A']
+    df.dropna(axis = 0,how ='any', subset = ['Zone B FR Area'],inplace = True)
+    #fill all blanks in zone A as 'No
+    df['Zone A Construction Area'].fillna('No',inplace=True)
+    #hide NRIC
+    new_NRIC = hide_NRIC(list(df['NRIC/FIN']))
+    df['NRIC/FIN'] = new_NRIC
+    return df
+
+
+def hide_NRIC(lst): #pass of list of NRIC
+    #convert NRIC to hide NRIC details
+    new_lst = []
+    for indx in lst:
+        new_lst.append(indx[0]+'XXXX'+indx[5:])
+    return new_lst
+
+def write_zone(path,df_zoneA,df_zoneB):
+    with pd.ExcelWriter(path) as writer:
+        df_zoneA.to_excel(writer, sheet_name = 'zone_A_masterlist', index=False)
+        df_zoneB.to_excel(writer, sheet_name = 'zone_B_masterlist', index=False)
+
+if __name__ == '__main__':
+    path1 = str(input("Please enter in file location of BCA approved file:\n"))
+    path2 = str(input("Please enter in file location of FR seperation file:\n"))
+    path1 = path1.replace('\\','/')
+    path2 = path2.replace('\\','/')
+    #start time
+    start_time = datetime.now()
+    #initialise dataframes
+    df_approved = read(path1,1)
+    #retrieve zoneA
+    df_zoneA = isolate_zone_A(df_approved.copy(deep = True))
+    #retrieve zoneB
+    df_zoneB = isolate_zone_B(df_approved.copy(deep = True))
+    #end time
+    end_time = datetime.now()
+    #write all into new file
+    write_zone(path2,df_zoneA,df_zoneB)
+    print('FR seperation done')
+    print('Duration: {}'.format(end_time - start_time))
