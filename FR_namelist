@@ -4,12 +4,7 @@ from collections import Counter
 import random
 from datetime import datetime
 
-lst_zone = (2,3,12,13,22,23)
-
-drop_lst = ('BESCON','3HPA','AT','Chong & Lee',
-            'GOOGLE ASIA PACIFIC PTE. LTD.','BBFL PTE. LTD.',
-            'ALPHA ACOUSTICS ENGINEERING PTE. LTD.','SD ARCHITECTS & ASSOCIATES PTE. LTD.',
-            'NEW UNIVERSAL SOLUTION','SODEXO SINGAPORE PTE. LTD.','SATO KOGYO (S) PTE. LTD.')
+lst_zone = (2,3,12,13,18)
 
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
@@ -25,14 +20,8 @@ def isolate_zone_A(df):#df_approved must be deep copy
             drop_col.append(lst_col[num])
     df.drop(columns=drop_col,inplace=True)
     #drop all 'No' in df['Zone A']
-    df.drop(index = df.index[df['Zone A Construction Area']=='No'].tolist(),inplace = True)
-    #drop all blanks in df['Zone A']
-    df.dropna(axis = 0,how ='any', subset = ['Zone A Construction Area'],inplace = True)
-    #fill all blanks in zone B as 'No
-    df['Zone B FR Area'].fillna('No',inplace=True)
-    #hide NRIC
-    new_NRIC = hide_NRIC(list(df['NRIC/FIN']))
-    df['NRIC/FIN'] = new_NRIC
+    df.drop(index = df.index[df['Work Zone e.g Blk 1 lvl 8, zone A etc']=='Zone B'].tolist(),inplace = True)
+    df.drop(index = df.index[df['Work Zone e.g Blk 1 lvl 8, zone A etc']=='Free Zone'].tolist(),inplace = True)
     return df
 
 def isolate_zone_B(df):#df_approved must be deep copy
@@ -44,16 +33,8 @@ def isolate_zone_B(df):#df_approved must be deep copy
             drop_col.append(lst_col[num])
     df.drop(columns=drop_col,inplace=True)
     #drop all 'No' in df['Zone B']
-    df.drop(index = df.index[df['Zone B FR Area']=='No'].tolist(),inplace = True)
-    #drop all blanks in df['Zone A']
-    df.dropna(axis = 0,how ='any', subset = ['Zone B FR Area'],inplace = True)
-    #fill all blanks in zone A as 'No
-    df['Zone A Construction Area'].fillna('No',inplace=True)
-    #hide NRIC
-    new_NRIC = hide_NRIC(list(df['NRIC/FIN']))
-    df['NRIC/FIN'] = new_NRIC
+    df.drop(index = df.index[df['Work Zone e.g Blk 1 lvl 8, zone A etc']=='Zone A'].tolist(),inplace = True)
     return df
-
 
 def hide_NRIC(lst): #pass of list of NRIC
     #convert NRIC to hide NRIC details
@@ -62,27 +43,100 @@ def hide_NRIC(lst): #pass of list of NRIC
         new_lst.append(indx[0]+'XXXX'+indx[5:])
     return new_lst
 
-def write_zone(path,df_zoneA,df_zoneB):
+def align_NRIC(df,lst):
+    df['NRIC/FIN'] = lst
+    return df
+
+def align_NRIC_v2(df,add_lst,remove_lst):
+    df['added_NRIC/FIN'] = add_lst
+    df['remove_NRIC/FIN'] = remove_lst
+    return df
+
+def compare_NRIC(df_new,df_old):
+    #align NRIC of zone A, zone B, comparision A, comparision B
+    added_NRIC = []
+    added_names = []
+    added_company = []
+    added_direct_com = []
+    remove_NRIC = []
+    remove_names = []
+    remove_company = []
+    remove_direct_com =[]
+    #for added names
+    col_nric_new = list(df_new['NRIC/FIN'])
+    col_nric_old = list(df_old['NRIC/FIN'])
+    for num in range(0,len(col_nric_new)):
+        if df_new.iloc[num,0] not in col_nric_old:
+            added_NRIC.append(df_new.iloc[num,0])
+            added_names.append(df_new.iloc[num,1])
+            added_company.append(df_new.iloc[num,2])
+            added_direct_com.append(df_new.iloc[num,3])
+    #for remove names
+    for num in range(0,len(col_nric_old)):
+        if df_old.iloc[num,0] not in col_nric_new:
+            remove_NRIC.append(df_old.iloc[num,0])
+            remove_names.append(df_old.iloc[num,1])
+            remove_company.append(df_old.iloc[num,2])
+            remove_direct_com.append(df_old.iloc[num,3])
+    #compare len
+    while len(added_NRIC) != len(remove_NRIC):
+        #if added_NRIC more
+        if len(added_NRIC)<len(remove_NRIC):
+            added_NRIC.append('-')
+            added_names.append('-')
+            added_company.append('-')
+            added_direct_com.append('-')
+        if len(remove_NRIC)<len(added_NRIC):
+            remove_NRIC.append('-')
+            remove_names.append('-')
+            remove_company.append('-')
+            remove_direct_com.append('-')
+    d_dic = {'added_NRIC/FIN':added_NRIC,'added_names':added_names,
+             'added_company':added_company,'added_direct_com':added_direct_com,
+             'remove_NRIC/FIN':remove_NRIC,'remove_names':remove_names,
+             'remove_company':remove_company,'remove_direct_com':remove_direct_com}
+    df_compare = pd.DataFrame(data = d_dic)
+    return df_compare
+
+def write_zone(path,df_zoneA,df_zoneB,df_hidden_zoneA,df_hidden_zoneB,df_compareA,df_compareB):
     with pd.ExcelWriter(path) as writer:
         df_zoneA.to_excel(writer, sheet_name = 'zone_A_masterlist', index=False)
         df_zoneB.to_excel(writer, sheet_name = 'zone_B_masterlist', index=False)
+        df_hidden_zoneA.to_excel(writer, sheet_name = 'zone_A_masterlist_hidden', index=False)
+        df_hidden_zoneB.to_excel(writer, sheet_name = 'zone_B_masterlist_hidden', index=False)
+        df_compareA.to_excel(writer, sheet_name = 'comparision_A', index=False)
+        df_compareB.to_excel(writer, sheet_name = 'comparision_B', index=False)
 
 if __name__ == '__main__':
     path1 = str(input("Please enter in file location of BCA approved file:\n"))
     path2 = str(input("Please enter in file location of FR seperation file:\n"))
+    path3 = str(input("Please enter in file location of previous FR seperation file:\n"))
+
     path1 = path1.replace('\\','/')
     path2 = path2.replace('\\','/')
+    path3 = path3.replace('\\','/')
     #start time
     start_time = datetime.now()
     #initialise dataframes
     df_approved = read(path1,1)
+    df_previous_zoneA = read(path3,0)
+    df_previous_zoneB = read(path3,1)
     #retrieve zoneA
     df_zoneA = isolate_zone_A(df_approved.copy(deep = True))
     #retrieve zoneB
     df_zoneB = isolate_zone_B(df_approved.copy(deep = True))
+    #compare zone A and B 
+    df_compareA = compare_NRIC(df_zoneA,df_previous_zoneA)
+    df_compareB = compare_NRIC(df_zoneB,df_previous_zoneB)
+    #hide NRIC for df_zoneA, zoneB
+    df_hidden_zoneA = align_NRIC(df_zoneA.copy(deep=True),hide_NRIC(list(df_zoneA['NRIC/FIN'])))
+    df_hidden_zoneB = align_NRIC(df_zoneB.copy(deep=True),hide_NRIC(list(df_zoneB['NRIC/FIN'])))
+    #hide NRIC for compareA,compareB
+    df_compareA = align_NRIC_v2(df_compareA,hide_NRIC(list(df_compareA['added_NRIC/FIN'])),hide_NRIC(list(df_compareA['remove_NRIC/FIN'])))
+    df_compareB = align_NRIC_v2(df_compareB,hide_NRIC(list(df_compareB['added_NRIC/FIN'])),hide_NRIC(list(df_compareB['remove_NRIC/FIN'])))
     #end time
     end_time = datetime.now()
     #write all into new file
-    write_zone(path2,df_zoneA,df_zoneB)
+    write_zone(path2,df_zoneA,df_zoneB,df_hidden_zoneA,df_hidden_zoneB,df_compareA,df_compareB)
     print('FR seperation done')
     print('Duration: {}'.format(end_time - start_time))
