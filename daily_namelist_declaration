@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+from collections import Counter
+import random
+from datetime import datetime
+
+Daily_colkeep =(0,2,3,19,65)
+
+def remove_blanks_duplicates(df):
+    #remove duplicates in Employee details sheet
+    df.drop_duplicates(subset = ['NRIC/FIN'],keep = "first", inplace = True)#source is changed
+    #remove blanks or #N/A values
+    df.dropna(axis = 0,how ='any', subset = ['NRIC/FIN'],inplace = True)
+    df.index = np.arange(1,len(df)+1)
+    df['SL NO'] = df.index
+    return df
+
+def align_format(df):
+    drop_lst=[]
+    global Daily_colkeep
+    col_lst = list(df.columns)
+    for num in range(0,len(col_lst)):
+        if num not in Daily_colkeep:   
+            drop_lst.append(col_lst[num])
+    df.drop(columns=drop_lst,inplace=True)
+    return df
+def hide_NRIC(lst): #pass of list of NRIC
+    #convert NRIC to hide NRIC details
+    new_lst = []
+    for indx in lst:
+        new_lst.append(indx[0]+'XXXX'+indx[5:])
+    return new_lst
+
+def write_namelist(path,df_daily,date):
+    with pd.ExcelWriter(path) as writer:
+        df_daily.to_excel(writer, sheet_name = date, index=False)
+
+if __name__ == '__main__':
+    path1 = str(input("Please enter in file location of daily site access file:\n"))
+    date = str(input("Please enter in date in the format yyyymmdd:\n"))
+
+    path1 = path1.replace('\\','/')
+    #start time
+    start_time = datetime.now()
+    #initialise dataframes
+    df_daily = read(path1,0)
+    #remove NRIC duplicates
+    df_daily = align_format(remove_blanks_duplicates(df_daily))
+    hidden_NRIC = hide_NRIC(list(df_daily['NRIC/FIN'])
+    df_daily['NRIC/FIN'] = hidden_NRIC
+    write_namelist(path,df_daily,date)
+    print('forecasted daily namelist generated')
+    print('Duration: {}'.format(end_time - start_time))
