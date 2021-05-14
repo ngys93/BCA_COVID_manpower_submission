@@ -4,7 +4,11 @@ from collections import Counter
 import random
 from datetime import datetime
 
-Daily_colkeep =(0,2,3,19,65)
+Daily_colkeep =(0,2,4,20)
+
+def read(path,sheet):
+    df = pd.read_excel(path,sheet)
+    return df
 
 def remove_blanks_duplicates(df):
     #remove duplicates in Employee details sheet
@@ -13,6 +17,9 @@ def remove_blanks_duplicates(df):
     df.dropna(axis = 0,how ='any', subset = ['NRIC/FIN'],inplace = True)
     df.index = np.arange(1,len(df)+1)
     df['SL NO'] = df.index
+    #remove FIN/NRIC
+    df.drop(index = df.index[df['NRIC/FIN']=='FIN/NRIC'].tolist(),inplace = True)
+    print(df['NRIC/FIN'])
     return df
 
 def align_format(df):
@@ -24,6 +31,7 @@ def align_format(df):
             drop_lst.append(col_lst[num])
     df.drop(columns=drop_lst,inplace=True)
     return df
+
 def hide_NRIC(lst): #pass of list of NRIC
     #convert NRIC to hide NRIC details
     new_lst = []
@@ -31,23 +39,86 @@ def hide_NRIC(lst): #pass of list of NRIC
         new_lst.append(indx[0]+'XXXX'+indx[5:])
     return new_lst
 
-def write_namelist(path,df_daily,date):
+def comparision(df_new,df_old):
+    added_NRIC = []
+    added_names = []
+    added_company = []
+    remove_NRIC = []
+    remove_names = []
+    remove_company = []
+    
+    col_nricA = list(df_new.iloc[:,1])
+    col_nricB = list(df_old.iloc[:,1])
+    for num in range(1,len(col_nricA)):
+        if df_new.iloc[num,1] in col_nricB:
+            pass
+        else:
+            added_NRIC.append(df_new.iloc[num,1])
+            added_names.append(df_new.iloc[num,2])
+            added_company.append(df_new.iloc[num,3])
+    #for remove names
+    for num in range(1,len(col_nricB)):
+        if df_old.iloc[num,1] in col_nricA:
+            pass
+        else:
+            remove_NRIC.append(df_old.iloc[num,1])
+            remove_names.append(df_old.iloc[num,2])
+            remove_company.append(df_old.iloc[num,3])
+    #compare len
+    while len(added_NRIC) != len(remove_NRIC):
+        #if added_NRIC more
+        if len(added_NRIC)<len(remove_NRIC):
+            added_NRIC.append('-')
+            added_names.append('-')
+            added_company.append('-')
+        if len(remove_NRIC)<len(added_NRIC):
+            remove_NRIC.append('-')
+            remove_names.append('-')
+            remove_company.append('-')
+    d_dic = {'added_NRIC/FIN':added_NRIC,'added_names':added_names,
+             'added_company':added_company,'remove_NRIC/FIN':remove_NRIC,
+             'remove_names':remove_names,'remove_company':remove_company}
+    df_compare = pd.DataFrame(data = d_dic)
+    return df_compare
+
+def reindex(df):#pass in df_hidden
+    df_new = df.reindex(columns=['Name','NRIC/FIN','Company'])
+    return df_new
+
+def write_namelist(path,df_daily,df_daily_hidden,date,df_compare):
     with pd.ExcelWriter(path) as writer:
         df_daily.to_excel(writer, sheet_name = date, index=False)
+        df_daily_hidden.to_excel(writer, sheet_name = 'NRIC_hidden', index=False)
+        df_compare.to_excel(writer, sheet_name = 'compare', index=False)
 
 if __name__ == '__main__':
     path1 = str(input("Please enter in file location of daily site access file:\n"))
+    path2 = str(input("Please enter in file location of previous site access file:\n"))
     date = str(input("Please enter in date in the format yyyymmdd:\n"))
 
     path1 = path1.replace('\\','/')
+    path2 = path2.replace('\\','/')
     #start time
     start_time = datetime.now()
     #initialise dataframes
     df_daily = read(path1,0)
+    df_old = read(path2,0)
     #remove NRIC duplicates
     df_daily = align_format(remove_blanks_duplicates(df_daily))
-    hidden_NRIC = hide_NRIC(list(df_daily['NRIC/FIN'])
-    df_daily['NRIC/FIN'] = hidden_NRIC
-    write_namelist(path,df_daily,date)
+
+    df_daily_hidden = df_daily.copy(deep = True)
+    hidden_NRIC = hide_NRIC(list(df_daily['NRIC/FIN']))
+    df_daily_hidden['NRIC/FIN'] = hidden_NRIC
+
+    df_compare = comparision(df_daily,df_old)
+    add_nric_hide = hide_NRIC(list(df_compare['added_NRIC/FIN']))
+    remove_nric_hide = hide_NRIC(list(df_compare['remove_NRIC/FIN']))
+    df_compare['added_NRIC/FIN'] = add_nric_hide
+    df_compare['remove_NRIC/FIN'] = remove_nric_hide
+
+    df_daily_hidden = reindex(df_daily_hidden)
+
+    #write_namelist(path1,df_daily,df_daily_hidden,date,df_compare)
+    end_time = datetime.now()
     print('forecasted daily namelist generated')
     print('Duration: {}'.format(end_time - start_time))
