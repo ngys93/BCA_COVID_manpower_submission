@@ -1,19 +1,35 @@
+#for 1A namelist and 1B
 import pandas as pd
 import numpy as np
 from collections import Counter
 import random
 from datetime import datetime
 
-ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,23,82,83)
+ED_colkeep = (0,1,2,3,4,5,6,7,8,9,10,11,12,14,20,25,38,34,35,36,66,67,79,83)
 FD_colkeep = (0,78,1,25,26,27,28)
 VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
                 'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
-VC_colkeep = (2,3,4,79,20,25,31,80,81)
+VC_colkeep = (2,3,4,79,20,25,31,80,81,83)
 ZoneA_colkeep = (2,3,4,20,25,82)
 ZoneB_colkeep = (2,3,4,20,25,83)
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
     return df
+
+def isolate_1A(df):
+    df.drop(index = df.index[df['1A/1B']=='1B'].tolist(),inplace = True)
+    df.dropna(axis = 0,how ='any', subset = ['1A/1B'],inplace = True)
+    df.index = np.arange(1,len(df)+1)
+    df['SL NO'] = df.index
+    return df
+
+def isolate_1B(df):
+    df.drop(index = df.index[df['1A/1B']=='1A'].tolist(),inplace = True)
+    df.dropna(axis = 0,how ='any', subset = ['1A/1B'],inplace = True)
+    df.index = np.arange(1,len(df)+1)
+    df['SL NO'] = df.index
+    return df
+    
 def segragated_team_plan(df):
     lst_col = list(df.columns)
     data_c = (0,71,25,67,2,4,70,72,66,73,74,75,76,77)
@@ -68,17 +84,29 @@ def align_format(df):
                                'Is the individual appointed as a COVID Safe Worker Leader?',
                                'Is the individual based in a worksite/facility?','Company',
                                'Direct Employer Company Name','STREET NAME','BLOCK','LEVEL','UNIT','Work Zone e.g Blk 1 lvl 8, zone A etc','Team identifier',
-                               'Type of Pass','Gender','Zone A Construction Area','Zone B FR Area'])
+                               'Type of Pass','Age','1A/1B'])
     return df_1
 
-def write_BCA(path,df1,df2,df3,df4,df_compare,df_vc):
+def write_BCA_master(path,df,df_compare,df_vc):
     with pd.ExcelWriter(path) as writer:
-        df1.to_excel(writer, sheet_name = 'Firm Details', index=False)
-        df2.to_excel(writer, sheet_name = 'Employee Details', index=False)
-        df4.to_excel(writer, sheet_name = 'Worksite Details', index=True)
-        df3.to_excel(writer, sheet_name = '(LS) Segregated Team Plan', index=False)
-        df_compare.to_excel(writer, sheet_name = 'Comparison', index=False)
-        df_vc.to_excel(writer, sheet_name = 'Vacination Tracker', index=False)
+        df.to_excel(writer, sheet_name = 'masterfile', index=False)
+        df_compare.to_excel(writer, sheet_name = 'comparision', index=False)
+        df_vc.to_excel(writer, sheet_name = 'vacinated check', index=False)
+
+def write_BCA_1A(path,df_FD,df_EM,df_WD,df_compare):
+    with pd.ExcelWriter(path) as writer:
+        df_FD.to_excel(writer, sheet_name = 'Firm Details_1A', index=False)
+        df_EM.to_excel(writer, sheet_name = 'Employee Details_1A', index=False)
+        df_WD.to_excel(writer, sheet_name = 'Worksite Details_1A', index=False)
+        df_compare.to_excel(writer, sheet_name = 'Comparision', index=False)
+
+def write_BCA_1B(path,df_FD,df_EM,df_WD,df_STP,df_compare):
+    with pd.ExcelWriter(path) as writer:
+        df_FD.to_excel(writer, sheet_name = 'Firm Details_1B', index=False)
+        df_EM.to_excel(writer, sheet_name = 'Employee Details_1B', index=False)
+        df_WD.to_excel(writer, sheet_name = 'Worksite Details_1B', index=False)
+        df_STP.to_excel(writer, sheet_name = 'Segregated Team Plan_1B', index=False)
+        df_compare.to_excel(writer, sheet_name = 'Comparision', index=False)
 
 def align_firm(df):
     global FD_colkeep
@@ -194,9 +222,11 @@ def compare(df_A,df_B):
     added_NRIC = []
     added_names = []
     added_company = []
+    added_project =[]
     remove_NRIC = []
     remove_names = []
     remove_company = []
+    remove_project =[]
     #for added names
     col_nricA = list(df_A.iloc[:,2])
     col_nricB = list(df_B.iloc[:,2])
@@ -207,6 +237,7 @@ def compare(df_A,df_B):
             added_NRIC.append(df_A.iloc[num,2])
             added_names.append(df_A.iloc[num,3])
             added_company.append(df_A.iloc[num,12])
+            added_project.append(df_A.iloc[num,22])
     #for remove names
     for num in range(1,len(col_nricB)):
         if df_B.iloc[num,2] in col_nricA:
@@ -215,6 +246,7 @@ def compare(df_A,df_B):
             remove_NRIC.append(df_B.iloc[num,2])
             remove_names.append(df_B.iloc[num,3])
             remove_company.append(df_B.iloc[num,12])
+            remove_project.append(df_B.iloc[num,22])
     #compare len
     while len(added_NRIC) != len(remove_NRIC):
         #if added_NRIC more
@@ -222,13 +254,15 @@ def compare(df_A,df_B):
             added_NRIC.append('-')
             added_names.append('-')
             added_company.append('-')
+            added_project.append('-')
         if len(remove_NRIC)<len(added_NRIC):
             remove_NRIC.append('-')
             remove_names.append('-')
             remove_company.append('-')
+            remove_project.append('-')
     d_dic = {'added_NRIC/FIN':added_NRIC,'added_names':added_names,
-             'added_company':added_company,'remove_NRIC/FIN':remove_NRIC,
-             'remove_names':remove_names,'remove_company':remove_company}
+             'added_company':added_company,'added_project':added_project,'remove_NRIC/FIN':remove_NRIC,
+             'remove_names':remove_names,'remove_company':remove_company,'remove_project':remove_project}
     df_compare = pd.DataFrame(data = d_dic)
     return df_compare
 
@@ -283,39 +317,68 @@ def consolidate(df_over_45,df_dorm):
     df_vc.drop_duplicates(subset = ['NRIC/FIN'],keep = "first", inplace = True)
     return df_vc
 
+def replace_path(path_dic):
+    keys_lst = list(path_dic.keys())
+    for key in keys_lst:
+        path_dic[key].replace('\\','/')
+    return path_dic
+
 if __name__ == '__main__':
-    path1 = str(input("Please enter in file location of BCA submission file:\n"))
-    path2 = str(input("Please enter in file location of preceeded BCA approved file:\n"))
-    path1 = path1.replace('\\','/')
-    path2 = path2.replace('\\','/')
+    path_master = str(input("Please enter in file location of masterfile BCA submission file:\n"))
+    path_pre = str(input("Please enter in file location of preceeded BCA approved file:\n"))
+    path_1A = str(input("Please enter in file location of 1A excel file:\n"))
+    path_1B = str(input("Please enter in file location of 1B excel file(if not writing for 1B, put 'N'):\n"))
+    #replace'\'
+    path_dic = {'path_master': path_master,
+                'path_pre': path_pre,
+                'path_1A': path_1A,
+                'path_1B': path_1B}
+    
+    path_dic = replace_path(path_dic)
+
     #start time
     start_time = datetime.now()
     #initialise dataframes
-    df_EMv1 = remove_blanks_duplicates(read(path1,1))
-    df_FD = df_EMv1.copy(deep=True)#deep copy1
-    df_wdv1 = df_EMv1.copy(deep=True)#deep copy2
-    #worksite calc
-    df_WD = worksite(df_wdv1)
-    #company details alignment
-    df_FD1 = align_firm(df_FD)
-    #STP
-    df_STP = segragated_team_plan(df_EMv1.copy(deep=True))
+    #initialise mastersheet
+    df_mastersheet = remove_blanks_duplicates(read(path_dic['path_master'],0))
+    #seperate 1A and 1B
+    df_EM_1A = isolate_1A(df_mastersheet.copy(deep=True))
+    if path_dic['path_1B'] != 'N':
+        df_EM_1B = isolate_1B(df_mastersheet.copy(deep=True))
+    #1A
+    #worksite calc_1A
+    df_WD_1A = worksite(df_EM_1A.copy(deep=True))
+    #company details alignment 1A
+    df_FD_1A = align_firm(df_EM_1A.copy(deep=True))
     #Employee details align
-    df_EMv2 = align_format(df_EMv1.copy(deep=True))
-    #STP
-    df_STP = segragated_team_plan(df_EMv1.copy(deep=True))
+    df_EM_1A = align_format(df_EM_1A)
+    #1B
+    #worksite calc_1B
+    if path_dic['path_1B'] != 'N':
+        df_WD_1B = worksite(df_EM_1B.copy(deep=True))
+        #company details alignment 1A
+        df_FD_1B = align_firm(df_EM_1B.copy(deep=True))
+        #STP_1A
+        df_STP_1B = segragated_team_plan(df_EM_1B.copy(deep=True))
+        #Employee details align
+        df_EM_1B = align_format(df_EM_1B)
+    #align format for mastersheet
+    df_mastersheet = align_format(df_mastersheet)
     #compare for new and removed names
-    df_outdated = read(path2, 1)
-    df_compare = compare(df_EMv2,df_outdated)
-    #track vacinated for dorm
-    df_vc_over45 = isvacinated_over45(df_EMv1.copy(deep=True))
+    df_outdated = read(path_dic['path_pre'], 0)
+    df_compare = compare(df_mastersheet,df_outdated)
+        #track vacinated for dorm
+    df_vc_over45 = isvacinated_over45(df_mastersheet.copy(deep=True))
     #track vacinated for over 45
-    df_vc_dorm = isvacinated_dormcheck(df_EMv1.copy(deep=True))
+    df_vc_dorm = isvacinated_dormcheck(df_mastersheet.copy(deep=True))
     #concatenate both df_vc_over45 and df_vc_dorm together(all duplicates to remove)
     df_vc = consolidate(df_vc_over45,df_vc_dorm)
     #end time
     end_time = datetime.now()
     #write all into new file
-    write_BCA(path1,df_FD1,df_EMv2,df_STP,df_WD,df_compare,df_vc)
+    write_BCA_master(path_dic['path_master'],df_mastersheet,df_compare,df_vc)
+    write_BCA_1A(path_dic['path_1A'],df_FD_1A,df_EM_1A,df_WD_1A,df_compare)
+    if path_dic['path_1B'] != 'N':
+        write_BCA_1B(path_dic['path_1B'],df_FD_1B,df_EM_1B,df_WD_1B,df_STP_1B,df_compare)
     print('BCA format ready')
     print('Duration: {}'.format(end_time - start_time))
