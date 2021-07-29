@@ -10,8 +10,6 @@ FD_colkeep = (0,78,1,25,26,27,28)
 VC_dorm = ('Sungei Tengah Lodge','Tuas View Dormitory',
                 'CDPL Tuas Dormitory','PPT Lodge 1B','Kranji Lodge 1')
 VC_colkeep = (2,3,4,79,20,25,31,80,81,83)
-ZoneA_colkeep = (2,3,4,20,25,82)
-ZoneB_colkeep = (2,3,4,20,25,83)
 
 def read(path,sheet):
     df = pd.read_excel(path,sheet)
@@ -88,13 +86,14 @@ def write_BCA_master(path,df,df_compare,df_vc,df_switch):
         df_vc.to_excel(writer, sheet_name = 'vacinated check', index=False)
         df_switch.to_excel(writer, sheet_name = 'switch project', index=False)
 
-def write_BCA_1B(path,df_FD,df_EM,df_WD,df_STP,df_compare):
+def write_BCA_1B(path,df_FD,df_EM,df_WD,df_STP,df_compare,df_switch):
     with pd.ExcelWriter(path) as writer:
         df_FD.to_excel(writer, sheet_name = 'Firm Details_1B', index=False)
         df_EM.to_excel(writer, sheet_name = 'Employee Details_1B', index=False)
         df_WD.to_excel(writer, sheet_name = 'Worksite Details_1B', index=False)
         df_STP.to_excel(writer, sheet_name = 'Segregated Team Plan_1B', index=False)
         df_compare.to_excel(writer, sheet_name = 'Addition Removal of names', index=False)
+        df_switch.to_excel(writer, sheet_name = 'switch project', index=False)
 
 def align_firm(df):
     global FD_colkeep
@@ -398,6 +397,6 @@ if __name__ == '__main__':
     #write all into new file
     write_BCA_master(path_dic['path_master'],df_mastersheet,df_compare,df_vc,df_switch)
     if path_dic['path_1B'] != 'N':
-        write_BCA_1B(path_dic['path_1B'],df_FD_1B,df_EM_1B,df_WD_1B,df_STP_1B,df_compare)
+        write_BCA_1B(path_dic['path_1B'],df_FD_1B,df_EM_1B,df_WD_1B,df_STP_1B,df_compare,df_switch)
     print('BCA format ready')
     print('Duration: {}'.format(end_time - start_time))
